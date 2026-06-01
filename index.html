@@ -7,23 +7,369 @@
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    :root {
+      --bg: #f0f7ff;
+      --bg-gradient-start: #e6f0ff;
+      --bg-gradient-end: #f8fafc;
+      --card: #ffffff;
+      --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      --card-shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.12);
+      --border: #e2e8f0;
+      --border-light: #f1f5f9;
+      --main: #0ea5e9;
+      --main-hover: #0284c7;
+      --light: #e0f2fe;
+      --text: #0f172a;
+      --subtext: #64748b;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      padding: 2rem;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: var(--radius-xl);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--card-shadow);
+    }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+      background: linear-gradient(135deg, var(--main) 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header p {
+      color: var(--subtext);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .header .icon {
+      font-size: 40px;
+      margin-bottom: 1rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      box-shadow: var(--card-shadow);
+      transition: all 0.3s ease;
+    }
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .label {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .label::before {
+      content: '';
+      width: 4px;
+      height: 16px;
+      background: var(--main);
+      border-radius: 2px;
+    }
+
+    #resumeFile {
+      width: 100%;
+      padding: 20px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      background: linear-gradient(135deg, var(--bg) 0%, white 100%);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    #resumeFile:hover {
+      border-color: var(--main);
+      background: var(--light);
+    }
+    #resumeFile::-webkit-file-upload-button {
+      background: var(--main);
+      color: white;
+      border: none;
+      padding: 8px 20px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .filename {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--subtext);
+      padding: 8px 12px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      display: inline-block;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      font-size: 14px;
+      line-height: 1.6;
+      outline: none;
+      resize: vertical;
+      background: var(--bg);
+      transition: all 0.3s ease;
+    }
+    textarea:focus {
+      border-color: var(--main);
+      box-shadow: 0 0 0 3px var(--light);
+      background: white;
+    }
+    textarea::placeholder {
+      color: var(--subtext);
+      opacity: 0.7;
+    }
+
+    select, input[type="password"] {
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      font-size: 14px;
+      outline: none;
+      background: var(--bg);
+      transition: all 0.3s ease;
+    }
+    select:focus, input[type="password"]:focus {
+      border-color: var(--main);
+      box-shadow: 0 0 0 3px var(--light);
+      background: white;
+    }
+    select {
+      min-width: 120px;
+      cursor: pointer;
+    }
+
+    .btn {
+      width: 100%;
+      height: 54px;
+      border-radius: var(--radius-md);
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      background: linear-gradient(135deg, var(--main) 0%, #06b6d4 100%);
+      color: white;
+      cursor: pointer;
+      margin: 10px 0 20px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s ease;
+    }
+    .btn:hover::before {
+      left: 100%;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .status {
+      text-align: center;
+      color: var(--subtext);
+      font-size: 14px;
+      margin-bottom: 20px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: var(--radius-md);
+      backdrop-filter: blur(10px);
+    }
+    .status.success {
+      color: var(--success);
+      background: rgba(16, 185, 129, 0.1);
+    }
+    .status.warning {
+      color: var(--warning);
+      background: rgba(245, 158, 11, 0.1);
+    }
+    .status.error {
+      color: var(--error);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .theme-panel {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--card);
+      padding: 14px;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      z-index: 999;
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+    }
+    .theme-panel .title {
+      font-size: 12px;
+      color: var(--subtext);
+      text-align: center;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .theme-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .theme-btn:hover {
+      transform: scale(1.1);
+      border-color: rgba(0,0,0,0.2);
+    }
+    .theme-btn.active {
+      border-color: var(--text);
+      transform: scale(1.15);
+    }
+    .theme-btn.active::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .config-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .config-row select {
+      flex-shrink: 0;
+    }
+    .config-row input {
+      flex: 1;
+    }
+
+    .tips {
+      font-size: 12px;
+      color: var(--subtext);
+      padding-top: 8px;
+      border-top: 1px dashed var(--border-light);
+      margin-top: 8px;
+    }
+
+    .result-box {
+      background: linear-gradient(135deg, var(--bg) 0%, white 100%);
+    }
+    .result-box textarea {
+      background: transparent;
+      min-height: 240px;
+      font-family: "SF Mono", "Monaco", "Inconsolata", monospace;
+    }
+  </style>
 </head>
 <body>
   <div class="theme-panel">
-    <button class="theme-btn" style="background:#0ea5e9" onclick="setTheme('blue')"></button>
-    <button class="theme-btn" style="background:#10b981" onclick="setTheme('green')"></button>
-    <button class="theme-btn" style="background:#8b5cf6" onclick="setTheme('purple')"></button>
-    <button class="theme-btn" style="background:#f97316" onclick="setTheme('orange')"></button>
+    <div class="title">主题颜色</div>
+    <div class="theme-grid">
+      <button class="theme-btn active" style="background: linear-gradient(135deg, #e6f0ff, #f8fafc)" onclick="setTheme('light-blue')" title="浅蓝"></button>
+      <button class="theme-btn" style="background: linear-gradient(135deg, #ffffff, #fafafa)" onclick="setTheme('white')" title="白色"></button>
+      <button class="theme-btn" style="background: linear-gradient(135deg, #fdf8f3, #f5ebe0)" onclick="setTheme('khaki')" title="卡其"></button>
+      <button class="theme-btn" style="background: linear-gradient(135deg, #f0fdf4, #fafafa)" onclick="setTheme('mint')" title="薄荷绿"></button>
+      <button class="theme-btn" style="background: linear-gradient(135deg, #fef3c7, #fef9c3)" onclick="setTheme('cream')" title="奶油黄"></button>
+      <button class="theme-btn" style="background: linear-gradient(135deg, #fae8ff, #f5f3ff)" onclick="setTheme('lavender')" title="薰衣草"></button>
+      <button class="theme-btn" style="background: linear-gradient(135deg, #dbeafe, #eff6ff)" onclick="setTheme('sky')" title="天空蓝"></button>
+      <button class="theme-btn" style="background: linear-gradient(135deg, #ecfdf5, #f0fdf4)" onclick="setTheme('sage')" title="鼠尾草"></button>
+      <button class="theme-btn" style="background: linear-gradient(135deg, #fef9c3, #fefce8)" onclick="setTheme('butter')" title="黄油色"></button>
+    </div>
   </div>
 
   <div class="container">
     <div class="header">
+      <div class="icon">🎯</div>
       <h1>简历优化工具</h1>
       <p>上传简历文件，粘贴JD，一键生成优化版简历</p>
     </div>
 
     <div class="status" id="status">请上传简历并输入JD</div>
+
+    <div class="card">
+      <div class="label">⚙️ AI配置（可选）</div>
+      <div class="config-row">
+        <select id="aiModel" onchange="setAIConfig()">
+          <option value="doubao">豆包</option>
+          <option value="claude">Claude</option>
+          <option value="gpt">GPT</option>
+        </select>
+        <input type="password" id="aiApiKey" placeholder="输入API密钥" onchange="setAIConfig()">
+      </div>
+      <div class="filename" id="aiStatus">⚠️ 未配置AI，将使用本地优化</div>
+      <div class="tips">API密钥仅在浏览器本地使用，不会上传到服务器</div>
+    </div>
 
     <div class="card">
       <div class="label">📄 上传简历（PDF / TXT）</div>
@@ -34,6 +380,7 @@
     <div class="card">
       <div class="label">🎯 粘贴目标岗位 JD</div>
       <textarea id="jdInput" placeholder="请粘贴JD内容，例如：
+
 岗位职责：
 1. 负责产品版本发布与迭代
 2. 推动研发流程AI转型
@@ -45,14 +392,15 @@
 - 熟悉AI大模型应用"></textarea>
     </div>
 
-    <button class="btn" id="optimizeBtn">🚀 一键优化简历</button>
+    <button class="btn" id="optimizeBtn">🚀 一键优化并下载</button>
 
-    <div class="card">
+    <div class="card result-box">
       <div class="label">✨ 优化结果预览</div>
       <textarea id="resultOutput" readonly placeholder="优化结果将显示在这里..."></textarea>
     </div>
   </div>
 
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js';</script>
   <script src="script.js"></script>
 </body>
 </html>
