@@ -367,8 +367,11 @@
         </select>
         <input type="password" id="aiApiKey" placeholder="输入API密钥" onchange="setAIConfig()">
       </div>
+      <div class="config-row" id="doubaoEndpointRow">
+        <input type="text" id="doubaoEndpoint" placeholder="输入推理接入点Endpoint ID (例如: ep-20250601120000-xxxxx)" onchange="setAIConfig()" style="flex:1;">
+      </div>
       <div class="filename" id="aiStatus">⚠️ 未配置AI，将使用本地优化</div>
-      <div class="tips">API密钥仅在浏览器本地使用，不会上传到服务器</div>
+      <div class="tips">豆包：API密钥 + Endpoint ID （在火山方舟创建推理接入点获取）</div>
     </div>
 
     <div class="card">
@@ -402,5 +405,11 @@
 
   <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js';</script>
   <script src="script.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      setAIConfig();
+      console.log('🎉 简历优化工具已加载，按F12打开控制台查看调试信息');
+    });
+  </script>
 </body>
 </html>
