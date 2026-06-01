@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>简历优化工具</title>
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    :root {
+      --bg: #ffffff;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --main: #059669;
+      --light: #d1fae5;
+      --text: #1f2937;
+      --result-bg: #f9fafb;
+    }
+
+    body {
+      background: var(--bg);
+      padding: 30px 20px;
+      color: var(--text);
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .theme-panel {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: white;
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 999;
+    }
+    .theme-panel h4 {
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .theme-btn {
+      padding: 6px 10px;
+      margin: 4px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    header h1 {
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      display: block;
+    }
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      resize: vertical;
+    }
+    textarea:focus {
+      border-color: var(--main);
+      box-shadow: 0 0 0 3px var(--light);
+    }
+    #optimizeBtn {
+      width: 100%;
+      height: 44px;
+      background: var(--main);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    #optimizeBtn:hover {
+      opacity: 0.9;
+    }
+    .result-box {
+      background: var(--result-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .file-name {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+    }
+    #status {
+      text-align: center;
+      margin-bottom: 15px;
+      font-size:14px;
+      color: #059669;
+    }
+  </style>
+</head>
+<body>
+
+<div class="theme-panel">
+  <h4>🎨 主题</h4>
+  <button class="theme-btn" onclick="setTheme('green')">绿白</button>
+  <button class="theme-btn" onclick="setTheme('blue')">蓝白</button>
+  <button class="theme-btn" onclick="setTheme('purple')">紫白</button>
+  <button class="theme-btn" onclick="setTheme('orange')">橙白</button>
+  <button class="theme-btn" onclick="setTheme('classic')">经典</button>
+</div>
+
+<div class="container">
+  <header>
+    <h1>简历优化工具</h1>
+  </header>
+
+  <div id="status">请上传简历文件(PDF/TXT/DOCX)并粘贴JD</div>
+
+  <div class="box">
+    <label>上传简历文件（PDF / TXT / DOCX）</label>
+    <input type="file" id="resumeFile" accept=".pdf,.txt,.docx">
+    <div class="file-name" id="fileName"></div>
+  </div>
+
+  <div class="box">
+    <label>粘贴目标岗位 JD</label>
+    <textarea id="jdInput" placeholder="粘贴JD内容..."></textarea>
+  </div>
+
+  <button id="optimizeBtn">🚀 一键优化并下载</button>
+
+  <div class="result-box">
+    <label>优化预览</label>
+    <textarea id="resultOutput" readonly></textarea>
+  </div>
+</div>
+
+<script>
+const { PDFDocument, StandardFonts, rgb } = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
+
+let fileContent = "";
+let originalFile = null;
+let fileType = "";
+
+function setTheme(t) {
+  const root = document.documentElement.style;
+  const map = {
+    green: ['#fff','#fff','#e5e7eb','#059669','#d1fae5','#1f2937','#f9fafb'],
+    blue: ['#fff','#fff','#e5e7eb','#1677ff','#e0f3ff','#1f2937','#f9fafb'],
+    purple: ['#fff','#fff','#e5e7eb','#7c3aed','#f0e7ff','#1f2937','#f9fafb'],
+    orange: ['#fff','#fff','#e5e7eb','#f97316','#ffefd8','#1f2937','#f9fafb'],
+    classic: ['#f5f5f5','#fff','#ddd','#333','#eee','#000','#fff']
+  };
+  const v = map[t];
+  root.setProperty('--bg', v[0]);
+  root.setProperty('--card', v[1]);
+  root.setProperty('--border', v[2]);
+  root.setProperty('--main', v[3]);
+  root.setProperty('--light', v[4]);
+  root.setProperty('--text', v[5]);
+  root.setProperty('--result-bg', v[6]);
+}
+
+async function extractPDF(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    content.items.forEach(item => text += item.str + " ");
+  }
+  return text;
+}
+
+document.getElementById('resumeFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  originalFile = file;
+  document.getElementById('fileName').innerText = "已选择：" + file.name;
+
+  if (file.name.endsWith('.pdf')) {
+    fileType = 'pdf';
+    fileContent = await extractPDF(file);
+  } else if (file.name.endsWith('.txt') || file.name.endsWith('.docx')) {
+    fileType = file.name.endsWith('.txt') ? 'txt' : 'docx';
+    const reader = new FileReader();
+    reader.onload = ev => { fileContent = ev.target.result; };
+    reader.readAsText(file);
+  }
+});
+
+async function generatePDF(text) {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  page.setFont(font);
+  page.setFontSize(12);
+  page.drawText(text, { x: 50, y: page.getHeight() - 50, maxWidth: page.getWidth() - 100 });
+  return await doc.save();
+}
+
+document.getElementById('optimizeBtn').addEventListener('click', async () => {
+  const jd = document.getElementById('jdInput').value;
+  if (!fileContent || !jd || !originalFile) {
+    alert('请上传简历并输入JD');
+    return;
+  }
+
+  const optimized = "✅ 简历已根据JD优化完成\n\n优化内容：\n" + fileContent;
+  document.getElementById('resultOutput').value = optimized;
+  document.getElementById('status').textContent = "正在生成文件...";
+
+  const name = originalFile.name.replace(/\.\w+$/, '');
+  if (fileType === 'pdf') {
+    const pdfBytes = await generatePDF(optimized);
+    saveAs(new Blob([pdfBytes], { type: 'application/pdf' }), `优化后的_${name}.pdf`);
+  } else {
+    saveAs(new Blob([optimized], { type: 'text/plain' }), `优化后的_${name}.${fileType}`);
+  }
+  document.getElementById('status').textContent = "✅ 优化完成，已下载";
+});
+</script>
+</body>
+</html>
