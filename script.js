@@ -98,7 +98,7 @@ function generateOptimizedResumeLocal(resume, jd) {
   optimized += `📊 JD关键词分析：\n`;
   optimized += `   ✅ 匹配关键词(${matchingKeywords.length}个)：${matchingKeywords.join('、') || '无'}\n`;
   if (missingKeywords.length > 0) {
-    optimized += `   ⚠️ 建议补充(${missingKeywords.length}个)：${missingKeywords.join('、')}\n\n`;
+    optimized += `   💡 建议补充(${missingKeywords.length}个)：${missingKeywords.join('、')}\n\n`;
   }
   
   optimized += `✨ 优化后的简历内容：\n`;
@@ -123,20 +123,26 @@ async function callAI(resume, jd) {
     let response;
     
     if (aiModel === "doubao" && aiApiKey) {
-      response = await fetch('https://api.doubao.com/api/text/chat', {
+      response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${aiApiKey}`
         },
         body: JSON.stringify({
-          model: 'doubao-3.5-turbo',
-          messages: [{ role: 'user', content: prompt }]
+          model: 'doubao-lite-128k',
+          messages: [{ role: 'user', content: prompt }],
+          stream: false
         })
       });
       
+      if (!response.ok) {
+        console.error('豆包API错误:', response.status);
+        return null;
+      }
+      
       const data = await response.json();
-      return data.choices?.[0]?.message?.content || data.result;
+      return data.choices?.[0]?.message?.content;
     } else if (aiModel === "claude" && aiApiKey) {
       response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -179,40 +185,56 @@ async function callAI(resume, jd) {
 }
 
 async function createPDF(text) {
-  const { PDFDocument, StandardFonts } = PDFLib;
-  const doc = await PDFDocument.create();
-  const page = doc.addPage([612, 792]);
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  page.setFont(font);
-  page.setFontSize(10);
-  
-  const lines = text.split('\n');
-  let y = 750;
-  const lineHeight = 14;
-  
-  for (const line of lines) {
-    page.drawText(line, { x: 50, y: y, maxWidth: 500 });
-    y -= lineHeight;
-    if (y < 50) {
-      const newPage = doc.addPage([612, 792]);
-      newPage.setFont(font);
-      newPage.setFontSize(10);
-      y = 750;
-      page = newPage;
+  try {
+    const { PDFDocument, StandardFonts } = PDFLib;
+    const doc = await PDFDocument.create();
+    const page = doc.addPage([612, 792]);
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    page.setFont(font);
+    page.setFontSize(10);
+    
+    const lines = text.split('\n');
+    let y = 750;
+    const lineHeight = 14;
+    
+    for (const line of lines) {
+      page.drawText(line, { x: 50, y: y, maxWidth: 500 });
+      y -= lineHeight;
+      if (y < 50) {
+        const newPage = doc.addPage([612, 792]);
+        newPage.setFont(font);
+        newPage.setFontSize(10);
+        y = 750;
+      }
     }
+    
+    return await doc.save();
+  } catch (error) {
+    console.error('PDF生成失败:', error);
+    return null;
   }
-  
-  return doc.save();
 }
 
 async function downloadResult(text, originalFileName) {
-  const name = originalFileName.replace(/\.\w+$/, "");
-  
-  if (fileType === "pdf") {
-    const bytes = await createPDF(text);
-    saveAs(new Blob([bytes], { type: "application/pdf" }), `优化后的_${name}.pdf`);
-  } else {
-    saveAs(new Blob([text], { type: "text/plain;charset=utf-8" }), `优化后的_${name}.txt`);
+  try {
+    const name = originalFileName.replace(/\.\w+$/, "");
+    
+    if (fileType === "pdf") {
+      const bytes = await createPDF(text);
+      if (bytes) {
+        saveAs(new Blob([bytes], { type: "application/pdf" }), `优化后的_${name}.pdf`);
+        return true;
+      } else {
+        saveAs(new Blob([text], { type: "text/plain;charset=utf-8" }), `优化后的_${name}.txt`);
+        return true;
+      }
+    } else {
+      saveAs(new Blob([text], { type: "text/plain;charset=utf-8" }), `优化后的_${name}.txt`);
+      return true;
+    }
+  } catch (error) {
+    console.error('下载失败:', error);
+    return false;
   }
 }
 
@@ -222,31 +244,43 @@ document.getElementById('resumeFile').onchange = async (e) => {
   originalFile = file;
   document.getElementById('fileName').innerText = "已选择：" + file.name;
 
-  if (file.name.endsWith(".pdf")) {
-    fileType = "pdf";
-    fileContent = await readPDF(file);
-  } else {
-    fileType = "txt";
-    const reader = new FileReader();
-    reader.onload = (ev) => { fileContent = ev.target.result; };
-    reader.readAsText(file);
+  try {
+    if (file.name.endsWith(".pdf")) {
+      fileType = "pdf";
+      fileContent = await readPDF(file);
+    } else {
+      fileType = "txt";
+      const reader = new FileReader();
+      reader.onload = (ev) => { fileContent = ev.target.result; };
+      reader.readAsText(file);
+    }
+  } catch (error) {
+    console.error('文件读取失败:', error);
+    alert('文件读取失败，请尝试其他文件');
   }
 };
 
 async function readPDF(file) {
-  const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  let text = "";
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    content.items.forEach(item => text += item.str + " ");
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      content.items.forEach(item => text += item.str + " ");
+    }
+    return text;
+  } catch (error) {
+    console.error('PDF读取失败:', error);
+    return "";
   }
-  return text;
 }
 
 document.getElementById('optimizeBtn').addEventListener('click', async () => {
   const jd = document.getElementById('jdInput').value.trim();
+  const statusEl = document.getElementById('status');
+  const btnEl = document.getElementById('optimizeBtn');
   
   if (!jd) {
     alert('请输入JD！');
@@ -258,29 +292,38 @@ document.getElementById('optimizeBtn').addEventListener('click', async () => {
     return;
   }
   
-  document.getElementById('status').innerText = '⏳ 正在优化...';
-  document.getElementById('optimizeBtn').innerText = '⏳ 优化中...';
-  document.getElementById('optimizeBtn').disabled = true;
+  statusEl.innerText = '⏳ 正在优化...';
+  btnEl.innerText = '⏳ 优化中...';
+  btnEl.disabled = true;
   
-  let result;
+  let result = null;
   
   if (aiApiKey) {
+    statusEl.innerText = '🔄 正在调用AI...';
     result = await callAI(fileContent, jd);
-    if (!result) {
-      result = generateOptimizedResumeLocal(fileContent, jd);
-      document.getElementById('status').innerText = '⚠️ AI调用失败，使用本地优化';
-    }
+  }
+  
+  if (result) {
+    statusEl.innerText = '✅ AI优化完成';
   } else {
     result = generateOptimizedResumeLocal(fileContent, jd);
-    document.getElementById('status').innerText = '✅ 使用本地优化完成';
+    statusEl.innerText = '✅ 优化完成';
   }
   
   document.getElementById('resultOutput').value = result;
-  document.getElementById('optimizeBtn').innerText = '🚀 一键优化简历';
-  document.getElementById('optimizeBtn').disabled = false;
+  btnEl.innerText = '🚀 一键优化并下载';
+  btnEl.disabled = false;
   
-  await downloadResult(result, originalFile.name);
-  document.getElementById('status').innerText = '✅ 优化完成，已下载';
+  statusEl.innerText = '💾 正在下载...';
+  const downloadSuccess = await downloadResult(result, originalFile.name);
+  
+  if (downloadSuccess) {
+    statusEl.innerText = '✅ 已下载';
+    statusEl.className = 'status success';
+  } else {
+    statusEl.innerText = '✅ 优化完成';
+    statusEl.className = 'status';
+  }
 });
 
 function setTheme(theme) {
