@@ -11,6 +11,7 @@ let originalFile = null;
 let fileType = "";
 let aiApiKey = "";
 let aiModel = "doubao";
+let doubaoEndpoint = "";
 
 function extractKeywords(text) {
   const keywords = [];
@@ -122,7 +123,11 @@ async function callAI(resume, jd) {
   try {
     let response;
     
-    if (aiModel === "doubao" && aiApiKey) {
+    if (aiModel === "doubao" && aiApiKey && doubaoEndpoint) {
+      console.log('📡 正在调用豆包API...');
+      console.log('  - Endpoint:', doubaoEndpoint);
+      console.log('  - API Key:', aiApiKey.substring(0, 10) + '...');
+      
       response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
         method: 'POST',
         headers: {
@@ -130,19 +135,26 @@ async function callAI(resume, jd) {
           'Authorization': `Bearer ${aiApiKey}`
         },
         body: JSON.stringify({
-          model: 'doubao-lite-128k',
+          model: doubaoEndpoint,
           messages: [{ role: 'user', content: prompt }],
           stream: false
         })
       });
       
+      console.log('  - 响应状态:', response.status, response.statusText);
+      
       if (!response.ok) {
-        console.error('豆包API错误:', response.status);
+        const errorText = await response.text();
+        console.error('❌ 豆包API错误:', response.status, errorText);
         return null;
       }
       
       const data = await response.json();
+      console.log('✅ API响应:', data);
       return data.choices?.[0]?.message?.content;
+    } else if (aiModel === "doubao" && !doubaoEndpoint) {
+      console.warn('⚠️ 豆包需要Endpoint ID（推理接入点ID），使用本地优化');
+      return null;
     } else if (aiModel === "claude" && aiApiKey) {
       response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -177,7 +189,7 @@ async function callAI(resume, jd) {
       return data.choices?.[0]?.message?.content;
     }
   } catch (error) {
-    console.error('AI调用失败:', error);
+    console.error('❌ AI调用失败:', error);
     return null;
   }
   
@@ -354,9 +366,11 @@ function setTheme(theme) {
 function setAIConfig() {
   const model = document.getElementById('aiModel').value;
   const key = document.getElementById('aiApiKey').value;
+  const endpoint = document.getElementById('doubaoEndpoint').value;
   
   aiModel = model;
   aiApiKey = key;
+  doubaoEndpoint = endpoint;
   
   const modelNames = {
     'doubao': '豆包',
@@ -364,7 +378,12 @@ function setAIConfig() {
     'gpt': 'GPT'
   };
   
-  if (aiApiKey) {
+  const doubaoEndpointRow = document.getElementById('doubaoEndpointRow');
+  doubaoEndpointRow.style.display = model === 'doubao' ? 'flex' : 'none';
+  
+  if (aiModel === 'doubao' && aiApiKey && doubaoEndpoint) {
+    document.getElementById('aiStatus').innerText = '✅ 已配置豆包 (API Key + Endpoint ID)';
+  } else if (aiApiKey) {
     document.getElementById('aiStatus').innerText = `✅ 已配置${modelNames[model]} API`;
   } else {
     document.getElementById('aiStatus').innerText = '⚠️ 未配置AI，将使用本地优化';
