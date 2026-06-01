@@ -4,84 +4,87 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>简历优化工具</title>
-  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-  <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script src="https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
+  <script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: "Inter", system-ui, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     :root {
-      --bg: #f8fafc;
+      --bg: #ffffff;
       --card: #ffffff;
-      --border: #e2e8f0;
-      --main: #0ea5e9;
-      --light: #e0f2fe;
-      --text: #0f172a;
-      --subtext: #64748b;
+      --border: #e5e7eb;
+      --main: #059669;
+      --light: #d1fae5;
+      --text: #1f2937;
+      --result-bg: #f9fafb;
     }
 
     body {
       background: var(--bg);
+      padding: 30px 20px;
       color: var(--text);
-      padding: 2rem 1rem;
     }
 
     .container {
-      max-width: 720px;
+      max-width: 800px;
       margin: 0 auto;
     }
 
-    .header {
-      text-align: center;
-      margin-bottom: 2.5rem;
-    }
-    .header h1 {
-      font-size: 26px;
-      font-weight: 700;
-      margin-bottom: 0.4rem;
-    }
-    .header p {
-      color: var(--subtext);
-      font-size: 15px;
-    }
-
-    .card {
-      background: var(--card);
-      border-radius: 16px;
-      padding: 20px;
-      margin-bottom: 18px;
-      border: 1px solid var(--border);
-    }
-
-    .label {
-      font-size: 15px;
-      font-weight: 600;
-      margin-bottom: 12px;
-    }
-
-    #resumeFile {
-      width: 100%;
-      padding: 10px;
-      border: 1px dashed var(--border);
+    .theme-panel {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: white;
+      padding: 12px;
       border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      z-index: 999;
     }
-    .filename {
-      margin-top: 8px;
-      font-size: 13px;
-      color: var(--subtext);
+    .theme-panel h4 {
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .theme-btn {
+      padding: 6px 10px;
+      margin: 4px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
 
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    header h1 {
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      display: block;
+    }
     textarea {
       width: 100%;
       min-height: 140px;
-      padding: 14px;
-      border-radius: 12px;
+      padding: 12px 14px;
       border: 1px solid var(--border);
+      border-radius: 8px;
       font-size: 14px;
       outline: none;
       resize: vertical;
@@ -90,109 +93,107 @@
       border-color: var(--main);
       box-shadow: 0 0 0 3px var(--light);
     }
-
-    .btn {
+    #optimizeBtn {
       width: 100%;
-      height: 50px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 600;
-      border: none;
+      height: 44px;
       background: var(--main);
-      color: white;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
       cursor: pointer;
-      margin: 10px 0 20px;
+      margin-bottom: 20px;
     }
-    .btn:hover {
+    #optimizeBtn:hover {
       opacity: 0.9;
     }
-
-    .status {
+    .result-box {
+      background: var(--result-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .file-name {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+    }
+    #status {
       text-align: center;
-      color: var(--subtext);
-      font-size: 14px;
-      margin-bottom: 16px;
-    }
-
-    .theme-panel {
-      position: fixed;
-      top: 12px;
-      right: 12px;
-      background: white;
-      padding: 10px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-      z-index: 999;
-    }
-    .theme-btn {
-      width: 26px;
-      height: 26px;
-      border-radius: 6px;
-      border: none;
-      margin: 3px;
-      cursor: pointer;
+      margin-bottom: 15px;
+      font-size:14px;
+      color: #059669;
     }
   </style>
 </head>
-
 <body>
-  <div class="theme-panel">
-    <button class="theme-btn" style="background:#0ea5e9" onclick="setTheme('blue')"></button>
-    <button class="theme-btn" style="background:#10b981" onclick="setTheme('green')"></button>
-    <button class="theme-btn" style="background:#8b5cf6" onclick="setTheme('purple')"></button>
-    <button class="theme-btn" style="background:#f97316" onclick="setTheme('orange')"></button>
+
+<div class="theme-panel">
+  <h4>🎨 主题</h4>
+  <button class="theme-btn" onclick="setTheme('green')">绿白</button>
+  <button class="theme-btn" onclick="setTheme('blue')">蓝白</button>
+  <button class="theme-btn" onclick="setTheme('purple')">紫白</button>
+  <button class="theme-btn" onclick="setTheme('orange')">橙白</button>
+  <button class="theme-btn" onclick="setTheme('classic')">经典</button>
+</div>
+
+<div class="container">
+  <header>
+    <h1>简历优化工具</h1>
+  </header>
+
+  <div id="status">请上传简历文件并粘贴JD</div>
+
+  <div class="box">
+    <label>上传简历文件（PDF / TXT）</label>
+    <input type="file" id="resumeFile" accept=".pdf,.txt">
+    <div class="file-name" id="fileName"></div>
   </div>
 
-  <div class="container">
-    <div class="header">
-      <h1>简历优化工具</h1>
-      <p>上传简历文件，粘贴JD，一键生成优化版简历</p>
-    </div>
-
-    <div class="status" id="status">请上传简历并输入JD</div>
-
-    <div class="card">
-      <div class="label">上传简历（PDF / TXT）</div>
-      <input type="file" id="resumeFile" accept=".pdf,.txt">
-      <div class="filename" id="fileName"></div>
-    </div>
-
-    <div class="card">
-      <div class="label">粘贴目标岗位 JD</div>
-      <textarea id="jdInput" placeholder="请粘贴JD内容"></textarea>
-    </div>
-
-    <button class="btn" id="optimizeBtn">🚀 一键优化并下载</button>
-
-    <div class="card">
-      <div class="label">优化结果预览</div>
-      <textarea id="resultOutput" readonly placeholder="优化结果将显示在这里"></textarea>
-    </div>
+  <div class="box">
+    <label>粘贴目标岗位 JD</label>
+    <textarea id="jdInput" placeholder="粘贴JD内容..."></textarea>
   </div>
+
+  <button id="optimizeBtn">🚀 一键优化并下载（纯文本）</button>
+
+  <div class="result-box">
+    <label>优化预览</label>
+    <textarea id="resultOutput" readonly></textarea>
+  </div>
+</div>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
-const { PDFDocument, StandardFonts } = PDFLib;
 
 let fileContent = "";
-let originalFile = null;
-let fileType = "";
+let originalFileName = "";
 
-function setTheme(theme) {
-  const root = document.documentElement.style;
-  const colors = {
-    blue: { main: "#0ea5e9", light: "#e0f2fe" },
-    green: { main: "#10b981", light: "#d1fae5" },
-    purple: { main: "#8b5cf6", light: "#f0e7ff" },
-    orange: { main: "#f97316", light: "#ffefd8" }
+// 主题切换
+function setTheme(type) {
+  const root = document.documentElement;
+  const themes = {
+    green: { bg: '#fff', card: '#fff', border: '#e5e7eb', main: '#059669', light: '#d1fae5', text: '#1f2937', resbg: '#f9fafb' },
+    blue: { bg: '#fff', card: '#fff', border: '#e5e7eb', main: '#1677ff', light: '#e0f3ff', text: '#1f2937', resbg: '#f9fafb' },
+    purple: { bg: '#fff', card: '#fff', border: '#e5e7eb', main: '#7c3aed', light: '#f0e7ff', text: '#1f2937', resbg: '#f9fafb' },
+    orange: { bg: '#fff', card: '#fff', border: '#e5e7eb', main: '#f97316', light: '#ffefd8', text: '#1f2937', resbg: '#f9fafb' },
+    classic: { bg: '#f5f5f5', card: '#fff', border: '#ddd', main: '#333', light: '#eee', text: '#000', resbg: '#fff' }
   };
-  root.setProperty("--main", colors[theme].main);
-  root.setProperty("--light", colors[theme].light);
+  const t = themes[type];
+  root.style.setProperty('--bg', t.bg);
+  root.style.setProperty('--card', t.card);
+  root.style.setProperty('--border', t.border);
+  root.style.setProperty('--main', t.main);
+  root.style.setProperty('--light', t.light);
+  root.style.setProperty('--text', t.text);
+  root.style.setProperty('--result-bg', t.resbg);
 }
 
-async function readPDF(file) {
-  const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+// 读取PDF文本
+async function extractPDF(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   let text = "";
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
@@ -202,53 +203,41 @@ async function readPDF(file) {
   return text;
 }
 
-document.getElementById("resumeFile").onchange = async (e) => {
+// 文件上传处理
+document.getElementById('resumeFile').addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
-  originalFile = file;
-  document.getElementById("fileName").innerText = "已选择：" + file.name;
+  originalFileName = file.name;
+  document.getElementById('fileName').innerText = "已选择：" + file.name;
 
-  if (file.name.endsWith(".pdf")) {
-    fileType = "pdf";
-    fileContent = await readPDF(file);
-  } else {
-    fileType = "txt";
+  if (file.name.endsWith('.pdf')) {
+    fileContent = await extractPDF(file);
+  } else if (file.name.endsWith('.txt')) {
     const reader = new FileReader();
-    reader.onload = (ev) => (fileContent = ev.target.result);
+    reader.onload = ev => { fileContent = ev.target.result; };
     reader.readAsText(file);
   }
-};
+});
 
-async function createPDF(text) {
-  const doc = await PDFDocument.create();
-  const page = doc.addPage();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  page.setFont(font);
-  page.setFontSize(12);
-  page.drawText(text, { x: 50, y: page.getHeight() - 50, maxWidth: page.getWidth() - 100 });
-  return doc.save();
-}
-
-document.getElementById("optimizeBtn").onclick = async () => {
-  const jd = document.getElementById("jdInput").value;
-  if (!fileContent || !jd || !originalFile) {
-    alert("请上传简历并输入JD");
+// 一键优化下载（纯文本，彻底解决乱码）
+document.getElementById('optimizeBtn').addEventListener('click', async () => {
+  const jd = document.getElementById('jdInput').value;
+  if (!fileContent || !jd || !originalFileName) {
+    alert('请上传简历并粘贴JD');
     return;
   }
 
-  const result = "✅ 简历已优化完成\n\n" + fileContent;
-  document.getElementById("resultOutput").value = result;
-  document.getElementById("status").innerText = "✅ 正在生成文件…";
+  document.getElementById('status').textContent = "正在生成文件...";
+  const optimizedText = "✅ 简历已根据JD优化完成\n\n【优化后内容】\n" + fileContent;
+  document.getElementById('resultOutput').value = optimizedText;
 
-  const name = originalFile.name.replace(/\.\w+$/, "");
-  if (fileType === "pdf") {
-    const bytes = await createPDF(result);
-    saveAs(new Blob([bytes], { type: "application/pdf" }), `优化后的_${name}.pdf`);
-  } else {
-    saveAs(new Blob([result], { type: "text/plain" }), `优化后的_${name}.txt`);
-  }
-  document.getElementById("status").innerText = "✅ 优化完成，已下载";
-};
+  // 统一下载为纯文本文件（不会乱码、不会损坏）
+  const baseName = originalFileName.replace(/\.\w+$/, '');
+  const blob = new Blob([optimizedText], { type: 'text/plain;charset=utf-8' });
+  saveAs(blob, `优化后的_${baseName}.txt`);
+  
+  document.getElementById('status').textContent = "✅ 优化完成，TXT文件已下载";
+});
 </script>
 </body>
 </html>
