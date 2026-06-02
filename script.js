@@ -198,7 +198,7 @@ async function callAI(resume, jd, apiKey, endpoint = null) {
 
 async function createPDF(text) {
   try {
-    const { PDFDocument, StandardFonts } = PDFLib;
+    const { PDFDocument, StandardFonts, rgb } = PDFLib;
     const doc = await PDFDocument.create();
     const page = doc.addPage([612, 792]);
     const font = await doc.embedFont(StandardFonts.Helvetica);
@@ -208,14 +208,30 @@ async function createPDF(text) {
     const lines = text.split('\n');
     let y = 750;
     const lineHeight = 14;
+    const greenColor = rgb(0, 0.6, 0);
     
     for (const line of lines) {
-      page.drawText(line, { x: 50, y: y, maxWidth: 500 });
+      let x = 50;
+      const parts = line.split(/(【.*?】)/g);
+      
+      for (const part of parts) {
+        if (part.startsWith('【') && part.endsWith('】')) {
+          page.setFillColor(greenColor);
+          page.drawText(part, { x: x, y: y });
+          x += font.widthOfTextAtSize(part, 10);
+          page.setFillColor(rgb(0, 0, 0));
+        } else {
+          page.drawText(part, { x: x, y: y });
+          x += font.widthOfTextAtSize(part, 10);
+        }
+      }
+      
       y -= lineHeight;
       if (y < 50) {
         const newPage = doc.addPage([612, 792]);
         newPage.setFont(font);
         newPage.setFontSize(10);
+        newPage.setFillColor(rgb(0, 0, 0));
         y = 750;
       }
     }
@@ -231,15 +247,10 @@ async function downloadResult(text, originalFileName) {
   try {
     const name = originalFileName.replace(/\.\w+$/, "");
     
-    if (fileType === "pdf") {
-      const bytes = await createPDF(text);
-      if (bytes) {
-        saveAs(new Blob([bytes], { type: "application/pdf" }), `优化后的_${name}.pdf`);
-        return true;
-      } else {
-        saveAs(new Blob([text], { type: "text/plain;charset=utf-8" }), `优化后的_${name}.txt`);
-        return true;
-      }
+    const bytes = await createPDF(text);
+    if (bytes) {
+      saveAs(new Blob([bytes], { type: "application/pdf" }), `优化后的_${name}.pdf`);
+      return true;
     } else {
       saveAs(new Blob([text], { type: "text/plain;charset=utf-8" }), `优化后的_${name}.txt`);
       return true;
