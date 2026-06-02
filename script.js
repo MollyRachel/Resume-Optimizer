@@ -369,8 +369,15 @@ function setAIConfig() {
   const endpoint = document.getElementById('doubaoEndpoint').value;
   
   aiModel = model;
-  aiApiKey = key;
-  doubaoEndpoint = endpoint;
+  aiApiKey = key.trim();
+  doubaoEndpoint = endpoint.trim();
+  
+  console.log('🔧 配置更新:', {
+    model: model,
+    apiKeyLength: aiApiKey.length,
+    endpoint: doubaoEndpoint,
+    endpointValid: doubaoEndpoint.startsWith('ep-')
+  });
   
   const modelNames = {
     'doubao': '豆包',
@@ -381,11 +388,28 @@ function setAIConfig() {
   const doubaoEndpointRow = document.getElementById('doubaoEndpointRow');
   doubaoEndpointRow.style.display = model === 'doubao' ? 'flex' : 'none';
   
-  if (aiModel === 'doubao' && aiApiKey && doubaoEndpoint) {
-    document.getElementById('aiStatus').innerText = '✅ 已配置豆包 (API Key + Endpoint ID)';
+  if (aiModel === 'doubao') {
+    if (aiApiKey && doubaoEndpoint) {
+      if (doubaoEndpoint.startsWith('ep-')) {
+        document.getElementById('aiStatus').innerText = '✅ 已配置豆包 (API Key + Endpoint ID)';
+        document.getElementById('aiStatus').className = 'status success';
+        console.log('✅ 豆包配置完成');
+      } else {
+        document.getElementById('aiStatus').innerText = '⚠️ Endpoint ID格式错误！应为 ep-xxxxxx 格式';
+        document.getElementById('aiStatus').className = 'status warning';
+      }
+    } else if (aiApiKey) {
+      document.getElementById('aiStatus').innerText = '⚠️ 请输入Endpoint ID（推理接入点ID）';
+      document.getElementById('aiStatus').className = 'status warning';
+    } else {
+      document.getElementById('aiStatus').innerText = '⚠️ 未配置AI，将使用本地优化';
+      document.getElementById('aiStatus').className = 'status';
+    }
   } else if (aiApiKey) {
     document.getElementById('aiStatus').innerText = `✅ 已配置${modelNames[model]} API`;
+    document.getElementById('aiStatus').className = 'status success';
   } else {
     document.getElementById('aiStatus').innerText = '⚠️ 未配置AI，将使用本地优化';
+    document.getElementById('aiStatus').className = 'status';
   }
 }
