@@ -197,6 +197,14 @@
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
       position: relative;
+    }
+    .btn-small {
+      padding: 8px 16px;
+      height: auto;
+      font-size: 14px;
+      margin: 10px 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
       overflow: hidden;
     }
     .btn::before {
@@ -360,16 +368,17 @@
     <div class="card">
       <div class="label">⚙️ AI配置（可选）</div>
       <div class="config-row">
-        <select id="aiModel">
+        <select id="aiModel" onchange="setAIConfig()">
           <option value="doubao">豆包</option>
           <option value="claude">Claude</option>
           <option value="gpt">GPT</option>
         </select>
-        <input type="password" id="aiApiKey" placeholder="输入API密钥">
+        <input type="password" id="aiApiKey" placeholder="输入API密钥" oninput="setAIConfig()">
       </div>
       <div class="config-row" id="doubaoEndpointRow">
-        <input type="text" id="doubaoEndpoint" placeholder="输入推理接入点Endpoint ID (例如: ep-20250601120000-xxxxx)" style="flex:1;">
+        <input type="text" id="doubaoEndpoint" placeholder="输入推理接入点Endpoint ID (例如: ep-20250601120000-xxxxx)" oninput="setAIConfig()" style="flex:1;">
       </div>
+      <button class="btn-small" onclick="setAIConfig()" style="width:auto; margin:10px 0;">🔄 刷新配置</button>
       <div class="filename" id="aiStatus">⚠️ 未配置AI，将使用本地优化</div>
       <div class="tips">豆包：API密钥 + Endpoint ID （在火山方舟创建推理接入点获取）</div>
     </div>
@@ -403,94 +412,13 @@
     </div>
   </div>
 
-<script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
-const { PDFDocument, StandardFonts } = PDFLib;
-
-let fileContent = "";
-let originalFile = null;
-let fileType = "";
-
-// 主题切换
-function setTheme(theme) {
-  const colors = {
-    "light-blue": { start: "#e6f0ff", end: "#f8fafc", main: "#0ea5e9" },
-    "white": { start: "#ffffff", end: "#fafafa", main: "#475569" },
-    "khaki": { start: "#fdf8f3", end: "#f5ebe0", main: "#d97706" },
-    "mint": { start: "#f0fdf4", end: "#fafafa", main: "#059669" },
-    "cream": { start: "#fef3c7", end: "#fef9c3", main: "#d97706" },
-    "lavender": { start: "#fae8ff", end: "#f5f3ff", main: "#8b5cf6" },
-    "sky": { start: "#dbeafe", end: "#eff6ff", main: "#3b82f6" },
-    "sage": { start: "#ecfdf5", end: "#f0fdf4", main: "#10b981" },
-    "butter": { start: "#fef9c3", end: "#fefce8", main: "#f59e0b" }
-  };
-  const c = colors[theme];
-  const r = document.documentElement;
-  r.style.setProperty("--bg-gradient-start", c.start);
-  r.style.setProperty("--bg-gradient-end", c.end);
-  r.style.setProperty("--main", c.main);
-  r.style.setProperty("--light", c.main === "#0ea5e9" ? "#e0f2fe" : "rgba(14,165,233,0.1)");
-}
-
-// 读取PDF
-async function readPDF(file) {
-  const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-  let text = "";
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    content.items.forEach(item => text += item.str + " ");
-  }
-  return text;
-}
-
-// 上传文件
-document.getElementById("resumeFile").onchange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  originalFile = file;
-  document.getElementById("fileName").innerText = "已选择：" + file.name;
-
-  if (file.name.endsWith(".pdf")) {
-    fileType = "pdf";
-    fileContent = await readPDF(file);
-  } else {
-    fileType = "txt";
-    const reader = new FileReader();
-    reader.onload = (ev) => fileContent = ev.target.result;
-    reader.readAsText(file);
-  }
-};
-
-// 本地智能优化（真正可用）
-function localOptimize(resume, jd) {
-  const jdWords = jd.split(/\W+/).filter(w => w.length > 1);
-  let optimized = "✅ 简历已根据JD智能优化完成\n\n";
-  optimized += "📌 优化点：关键词匹配、语句润色、结构清晰化\n\n";
-  optimized += "【优化后简历】\n" + resume;
-  return optimized;
-}
-
-// 生成并下载
-document.getElementById("optimizeBtn").onclick = async () => {
-  const jd = document.getElementById("jdInput").value;
-  if (!fileContent || !jd || !originalFile) {
-    alert("请上传简历并输入JD");
-    return;
-  }
-
-  const result = localOptimize(fileContent, jd);
-  document.getElementById("resultOutput").value = result;
-  document.getElementById("status").innerText = "✅ 正在生成文件…";
-  document.getElementById("status").className = "status success";
-
-  const name = originalFile.name.replace(/\.\w+$/, "");
-  const blob = new Blob([result], { type: "text/plain;charset=utf-8" });
-  saveAs(blob, `优化后的简历_${name}.txt`);
-
-  document.getElementById("status").innerText = "✅ 优化完成，文件已下载";
-};
-</script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.4.120/build/pdf.worker.min.js';</script>
+  <script src="script.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      setAIConfig();
+      console.log('🎉 简历优化工具已加载，按F12打开控制台查看调试信息');
+    });
+  </script>
 </body>
 </html>
