@@ -117,25 +117,26 @@ function generateOptimizedResumeLocal(resume, jd) {
   return optimized;
 }
 
-async function callAI(resume, jd) {
+async function callAI(resume, jd, apiKey, endpoint = null) {
   const prompt = `${SYSTEM_PROMPT}\n\n简历内容：\n${resume}\n\n目标JD：\n${jd}\n\n请根据JD优化这份简历。`;
+  const model = document.getElementById('aiModel').value;
   
   try {
     let response;
     
-    if (aiModel === "doubao" && aiApiKey && doubaoEndpoint) {
+    if (model === "doubao" && apiKey && endpoint) {
       console.log('📡 正在调用豆包API...');
-      console.log('  - Endpoint:', doubaoEndpoint);
-      console.log('  - API Key:', aiApiKey.substring(0, 10) + '...');
+      console.log('  - Endpoint:', endpoint);
+      console.log('  - API Key:', apiKey.substring(0, 10) + '...');
       
       response = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${aiApiKey}`
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: doubaoEndpoint,
+          model: endpoint,
           messages: [{ role: 'user', content: prompt }],
           stream: false
         })
@@ -146,21 +147,19 @@ async function callAI(resume, jd) {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('❌ 豆包API错误:', response.status, errorText);
+        alert(`API调用失败: ${response.status}\n${errorText}`);
         return null;
       }
       
       const data = await response.json();
       console.log('✅ API响应:', data);
       return data.choices?.[0]?.message?.content;
-    } else if (aiModel === "doubao" && !doubaoEndpoint) {
-      console.warn('⚠️ 豆包需要Endpoint ID（推理接入点ID），使用本地优化');
-      return null;
-    } else if (aiModel === "claude" && aiApiKey) {
+    } else if (model === "claude" && apiKey) {
       response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': aiApiKey,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
@@ -172,12 +171,12 @@ async function callAI(resume, jd) {
       
       const data = await response.json();
       return data.content?.[0]?.text;
-    } else if (aiModel === "gpt" && aiApiKey) {
+    } else if (model === "gpt" && apiKey) {
       response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${aiApiKey}`
+          'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
@@ -190,6 +189,7 @@ async function callAI(resume, jd) {
     }
   } catch (error) {
     console.error('❌ AI调用失败:', error);
+    alert('AI调用失败: ' + error.message);
     return null;
   }
   
@@ -308,18 +308,40 @@ document.getElementById('optimizeBtn').addEventListener('click', async () => {
   btnEl.innerText = '⏳ 优化中...';
   btnEl.disabled = true;
   
+  const currentModel = document.getElementById('aiModel').value;
+  const currentApiKey = document.getElementById('aiApiKey').value.trim();
+  const currentEndpoint = document.getElementById('doubaoEndpoint').value.trim();
+  
+  console.log('🚀 开始优化:', {
+    model: currentModel,
+    apiKeySet: currentApiKey.length > 0,
+    endpointSet: currentEndpoint.length > 0,
+    endpointValid: currentEndpoint.startsWith('ep-')
+  });
+  
   let result = null;
   
-  if (aiApiKey) {
+  if (currentModel === 'doubao' && currentApiKey && currentEndpoint && currentEndpoint.startsWith('ep-')) {
+    statusEl.innerText = '🔄 正在调用豆包AI...';
+    result = await callAI(fileContent, jd, currentApiKey, currentEndpoint);
+    if (result) {
+      statusEl.innerText = '✅ AI优化完成';
+    }
+  } else if ((currentModel === 'claude' || currentModel === 'gpt') && currentApiKey) {
     statusEl.innerText = '🔄 正在调用AI...';
-    result = await callAI(fileContent, jd);
+    result = await callAI(fileContent, jd, currentApiKey, null);
+    if (result) {
+      statusEl.innerText = '✅ AI优化完成';
+    }
   }
   
-  if (result) {
-    statusEl.innerText = '✅ AI优化完成';
-  } else {
+  if (!result) {
     result = generateOptimizedResumeLocal(fileContent, jd);
-    statusEl.innerText = '✅ 优化完成';
+    if (currentApiKey && !result) {
+      statusEl.innerText = '✅ 本地优化完成';
+    } else {
+      statusEl.innerText = '✅ 优化完成';
+    }
   }
   
   document.getElementById('resultOutput').value = result;
